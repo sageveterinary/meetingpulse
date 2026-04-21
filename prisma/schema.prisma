@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth (NextAuth.js) ────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  memberships   OrgMembership[]
+  createdMeetings Meeting[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Organizations ─────────────────────────────────────────────────
+
+enum SubscriptionTier {
+  free
+  pro
+  enterprise
+}
+
+enum SubscriptionStatus {
+  active
+  trialing
+  past_due
+  canceled
+}
+
+model Organization {
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  subscriptionTier   SubscriptionTier   @default(free)
+  subscriptionStatus SubscriptionStatus @default(active)
+  stripeCustomerId   String?            @unique
+  stripeSubscriptionId String?          @unique
+  maxUsers           Int                @default(10)
+  maxMeetingTypes    Int                @default(5)
+  historyRetentionDays Int              @default(90)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  memberships        OrgMembership[]
+  rosterMembers      RosterMember[]
+  meetingTypes       MeetingType[]
+  meetings           Meeting[]
+  invitations        OrgInvitation[]
+}
+
+enum OrgRole {
+  owner
+  admin
+  member
+  viewer
+}
+
+model OrgMembership {
+  id        String       @id @default(cuid())
+  userId    String
+  orgId     String
+  role      OrgRole      @default(member)
+  joinedAt  DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+model OrgInvitation {
+  id        String       @id @default(cuid())
+  orgId     String
+  email     String
+  role      OrgRole      @default(member)
+  token     String       @unique
+  expiresAt DateTime
+  createdAt DateTime     @default(now())
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, email])
+}
+
+// ─── Roster ────────────────────────────────────────────────────────
+
+enum AttendeeTitle {
+  NONE
+  DVM
+  DACVR
+  DACVIM
+}
+
+enum MeetingRole {
+  intern
+  resident
+  supervising_radiologist
+  guest_presenter
+}
+
+model RosterMember {
+  id          String        @id @default(cuid())
+  orgId       String
+  name        String
+  title       AttendeeTitle @default(NONE)
+  defaultRole MeetingRole?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  org         Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  attendances MeetingAttendance[]
+  meetingTypes MeetingTypeRoster[]
+
+  @@unique([orgId, name])
+}
+
+// ─── Meeting Types ─────────────────────────────────────────────────
+
+model MeetingType {
+  id              String   @id @default(cuid())
+  orgId           String
+  name            String
+  description     String?
+  sections        Json     // Array of { name, durationSeconds, subTimerEnabled, subTimerSeconds }
+  isDefault       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  meetings        Meeting[]
+  regularAttendees MeetingTypeRoster[]
+
+  @@unique([orgId, name])
+}
+
+model MeetingTypeRoster {
+  id             String       @id @default(cuid())
+  meetingTypeId  String
+  rosterMemberId String
+  meetingType    MeetingType  @relation(fields: [meetingTypeId], references: [id], onDelete: Cascade)
+  rosterMember   RosterMember @relation(fields: [rosterMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingTypeId, rosterMemberId])
+}
+
+// ─── Meetings ──────────────────────────────────────────────────────
+
+enum MeetingStatus {
+  in_progress
+  completed
+  canceled
+}
+
+model Meeting {
+  id             String        @id @default(cuid())
+  orgId          String
+  meetingTypeId  String
+  status         MeetingStatus @default(in_progress)
+  sectionsData   Json?         // Actual sections/topics covered during meeting
+  startedAt      DateTime      @default(now())
+  endedAt        DateTime?
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  org            Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  meetingType    MeetingType   @relation(fields: [meetingTypeId], references: [id], onDelete: Cascade)
+  createdBy      User          @relation(fields: [createdById], references: [id])
+  attendances    MeetingAttendance[]
+}
+
+model MeetingAttendance {
+  id              String       @id @default(cuid())
+  meetingId       String
+  rosterMemberId  String?
+  name            String       // Denormalized for ad-hoc attendees
+  title           AttendeeTitle @default(NONE)
+  role            MeetingRole?
+  joinedAt        DateTime     @default(now())
+  leftAt          DateTime?
+  durationMinutes Float?
+  meeting         Meeting      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  rosterMember    RosterMember? @relation(fields: [rosterMemberId], references: [id], onDelete: SetNull)
+}
