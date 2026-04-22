@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { requireOrgMembership, apiError, apiSuccess } from "@/lib/auth-utils";
 
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const org = await prisma.organization.findUnique({ where: { id: orgId } });
     if (!org?.stripeCustomerId) return apiError("No billing account found", 404);
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: org.stripeCustomerId,
       return_url: `${process.env.NEXTAUTH_URL}/org/${org.slug}/settings/billing`,
     });
