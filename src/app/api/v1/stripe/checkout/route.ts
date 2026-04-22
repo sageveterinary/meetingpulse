@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { stripe, PLANS } from "@/lib/stripe";
+import { getStripe, PLANS } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { requireOrgMembership, apiError, apiSuccess } from "@/lib/auth-utils";
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     // Create or retrieve Stripe customer
     let customerId = org.stripeCustomerId;
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user.email!,
         metadata: { orgId: org.id, orgName: org.name },
       });
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: planConfig.priceId, quantity: 1 }],
