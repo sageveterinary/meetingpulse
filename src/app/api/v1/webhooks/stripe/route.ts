@@ -3,11 +3,9 @@ import { getStripe, PLANS } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import Stripe from "stripe";
 
-
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature")!;
-
 
   let event: Stripe.Event;
   try {
@@ -15,7 +13,6 @@ export async function POST(req: NextRequest) {
   } catch {
     return new Response("Webhook signature verification failed", { status: 400 });
   }
-
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -39,7 +36,6 @@ export async function POST(req: NextRequest) {
       break;
     }
 
-
     case "invoice.paid": {
       const invoice = event.data.object as any;
       if (invoice.subscription) {
@@ -55,7 +51,6 @@ export async function POST(req: NextRequest) {
       }
       break;
     }
-
 
     case "invoice.payment_failed": {
       const invoice = event.data.object as any;
@@ -73,5 +68,46 @@ export async function POST(req: NextRequest) {
       break;
     }
 
-
     case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const org = await prisma.organization.findFirst({
+        where: { stripeSubscriptionId: subscription.id },
+      });
+      if (org) {
+        const freeConfig = PLANS.free;
+        await prisma.organization.update({
+          where: { id: org.id },
+          data: {
+            subscriptionTier: "free",
+            subscriptionStatus: "canceled",
+            stripeSubscriptionId: null,
+            maxUsers: freeConfig.maxUsers,
+            maxMeetingTypes: freeConfig.maxMeetingTypes,
+            historyRetentionDays: freeConfig.historyRetentionDays,
+          },
+        });
+      }
+      break;
+    }
+
+    case "customer.subscription.updated": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const org = await prisma.organization.findFirst({
+        where: { stripeSubscriptionId: subscription.id },
+      });
+      if (org) {
+        const status = subscription.status === "active" ? "active"
+          : subscription.status === "trialing" ? "trialing"
+          : subscription.status === "past_due" ? "past_due"
+          : "canceled";
+        await prisma.organization.update({
+          where: { id: org.id },
+          data: { subscriptionStatus: status as any },
+        });
+      }
+      break;
+    }
+  }
+
+  return new Response("OK", { status: 200 });
+}
