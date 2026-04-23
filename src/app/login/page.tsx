@@ -2,11 +2,56 @@
 
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        callbackUrl,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(isSignUp ? "Account created but login failed. Try signing in." : "Invalid email or password");
+        setLoading(false);
+      } else if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -26,6 +71,57 @@ function LoginContent() {
             </p>
           </div>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
+            {isSignUp && (
+              <input
+                type="text"
+                placeholder="Full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+              />
+            )}
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+            />
+            <input
+              type="password"
+              placeholder="Password (min 8 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white rounded-lg px-6 py-3 font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
+            </button>
+          </form>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">or</span>
+            </div>
+          </div>
+
           <button
             onClick={() => signIn("google", { callbackUrl })}
             className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 rounded-lg px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-all"
@@ -40,7 +136,13 @@ function LoginContent() {
           </button>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            By signing in, you agree to our Terms of Service and Privacy Policy.
+            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+            <button
+              onClick={() => { setIsSignUp(!isSignUp); setError(""); }}
+              className="text-blue-600 hover:underline font-medium"
+            >
+              {isSignUp ? "Sign in" : "Create one"}
+            </button>
           </p>
         </div>
       </div>
