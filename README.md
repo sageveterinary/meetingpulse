@@ -1,4 +1,4 @@
-# MeetingPulse
+# Meeting Rails
 
 AI-powered structured meeting facilitator with timed sections, audio cues, attendance tracking, and compliance reporting.
 

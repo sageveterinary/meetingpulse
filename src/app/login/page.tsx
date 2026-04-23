@@ -19,7 +19,7 @@ function LoginContent() {
                 <path d="M20 10V20L27 27" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                 <circle cx="20" cy="20" r="2" fill="currentColor" />
               </svg>
-              <h1 className="text-2xl font-bold text-gray-900">MeetingPulse</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Meeting Rails</h1>
             </div>
             <p className="text-gray-600">
               AI-powered structured meeting facilitator

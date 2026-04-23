@@ -28,7 +28,7 @@ export function AppShell({ user, children }: AppShellProps) {
                   <path d="M20 10V20L27 27" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   <circle cx="20" cy="20" r="2" fill="currentColor" />
                 </svg>
-                <span className="text-xl font-bold text-gray-900">MeetingPulse</span>
+                <span className="text-xl font-bold text-gray-900">Meeting Rails</span>
               </Link>
 
               <div className="hidden md:flex items-center gap-1">

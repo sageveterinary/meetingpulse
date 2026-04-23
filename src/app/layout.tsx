@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "MeetingPulse — AI-Powered Structured Meeting Facilitator",
+  title: "Meeting Rails — AI-Powered Structured Meeting Facilitator",
   description: "Run structured, timed meetings with AI audio cues, attendance tracking, and compliance reporting.",
 };
 

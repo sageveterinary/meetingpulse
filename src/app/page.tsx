@@ -12,7 +12,7 @@ export default function LandingPage() {
               <path d="M20 10V20L27 27" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
               <circle cx="20" cy="20" r="2" fill="currentColor" />
             </svg>
-            <span className="text-xl font-bold text-gray-900">MeetingPulse</span>
+            <span className="text-xl font-bold text-gray-900">Meeting Rails</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login" className="text-gray-600 hover:text-gray-900 text-sm font-medium">
@@ -121,7 +121,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center text-sm text-gray-500">
-          <p>&copy; {new Date().getFullYear()} MeetingPulse by Sage Veterinary Imaging. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Meeting Rails by Sage Veterinary Imaging. All rights reserved.</p>
         </div>
       </footer>
     </div>
